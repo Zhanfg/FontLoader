@@ -36,9 +36,9 @@ jobs:
       - name: Verify installable ZIP
         run: |
           test -f out/font-loader-1.2.0-beta2-release.zip
-          unzip -t out/font-loader-1.2.0-beta1-release.zip
-          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'module.prop'
-          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'lib/arm64-v8a/libfontloader.so'
+          unzip -t out/font-loader-1.2.0-beta2-release.zip
+          unzip -l out/font-loader-1.2.0-beta2-release.zip | grep -F 'module.prop'
+          unzip -l out/font-loader-1.2.0-beta2-release.zip | grep -F 'lib/arm64-v8a/libfontloader.so'
 
       - name: Simulate installation (Magisk and KernelSU)
         run: sh tests/install_smoke.sh out/font-loader-1.2.0-beta2-release.zip
