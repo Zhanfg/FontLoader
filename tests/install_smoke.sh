@@ -28,9 +28,10 @@ for mode in ksu magisk; do
     rm -rf "$work"
     exit 1
   }
-  for f in "zygisk/arm64-v8a.so" "zygisk/armeabi-v7a.so" "module.prop" "post-fs-data.sh" "skip_mount"; do
+  for f in "zygisk/arm64-v8a.so" "zygisk/armeabi-v7a.so" "module.prop" "post-fs-data.sh"; do
     test -s "$work/module/$f" || { cat "$work/install.log" >&2; echo "Missing installed $f" >&2; exit 1; }
   done
+  test -f "$work/module/skip_mount"
   test ! -e "$work/module/enable-preload"
   grep -q 'Boot Guard: font preloading disabled' "$work/install.log"
   grep -q 'Verified lib/arm64-v8a/libfontloader.so' "$work/install.log"
