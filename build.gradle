@@ -25,9 +25,9 @@ task clean(type: Delete) {
 
 ext {
     moduleId = 'font-loader'
-    moduleName = 'Font Loader'
-    moduleDescription = 'Preload font modules for Android 12. Do not enable useless DenyList and use hide module for hiding ROOT instead!'
+    moduleName = 'Font Loader (Boot Guard)'
+    moduleDescription = 'Boot-safe opt-in font preload. No automatic preloading.'
     moduleAuthor = 'JingMatrix, Rikka'
-    moduleVersionName = '1.1.0'
-    moduleVersionCode = 3
+    moduleVersionName = '1.2.0-bootguard-preview1'
+    moduleVersionCode = 6
 }
