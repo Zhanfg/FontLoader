@@ -1,201 +1,133 @@
 #include <jni.h>
+#include <limits.h>
 #include <unistd.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <nativehelper/scoped_utf_chars.h>
-#include <pmparser.h>
-#include <memory>
-#include <vector>
 #include <string>
-#include <string_view>
-#include <dirent.h>
-#include <private/ScopedReaddir.h>
+#include <vector>
+
+#include "font_scan.h"
 #include "logging.h"
-#include "zygisk.hpp"
 #include "misc.h"
+#include "zygisk.hpp"
 
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 using zygisk::ServerSpecializeArgs;
 
-static int GetProt(const procmaps_struct *procstruct) {
-    int prot = 0;
-    if (procstruct->is_r) {
-        prot |= PROT_READ;
-    }
-    if (procstruct->is_w) {
-        prot |= PROT_WRITE;
-    }
-    if (procstruct->is_x) {
-        prot |= PROT_EXEC;
-    }
-    return prot;
-}
+namespace {
 
-static void HideFromMaps(const std::vector<std::string> &fonts) {
-    std::unique_ptr<procmaps_iterator, decltype(&pmparser_free)> maps{pmparser_parse(-1), &pmparser_free};
-    if (!maps) {
-        LOGW("failed to parse /proc/self/maps");
+constexpr int kMaxFonts = 1024;
+
+void PreloadFonts(JNIEnv* env, const std::vector<std::string>& fonts) {
+    if (fonts.empty()) return;
+
+    jclass typeface = env->FindClass("android/graphics/Typeface");
+    if (!typeface) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        LOGW("Typeface is unavailable; cannot warm font cache");
+        return;
+    }
+    // Skia caches the *font file* here, not a single variable-font weight.
+    // This also works for TTC/OTC and OpenType variation axes, which the
+    // framework resolves later from the system's font_fallback.xml.
+    jmethodID warm_up =
+            env->GetStaticMethodID(typeface, "nativeWarmUpCache", "(Ljava/lang/String;)V");
+    if (!warm_up) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        LOGW("Typeface.nativeWarmUpCache is unavailable on this ROM");
+        env->DeleteLocalRef(typeface);
         return;
     }
 
-    for (procmaps_struct *i = pmparser_next(maps.get()); i; i = pmparser_next(maps.get())) {
-        using namespace std::string_view_literals;
-        std::string_view pathname = i->pathname;
-
-        if (std::find(fonts.begin(), fonts.end(), pathname) == fonts.end()) continue;
-
-        auto start = reinterpret_cast<uintptr_t>(i->addr_start);
-        auto end = reinterpret_cast<uintptr_t>(i->addr_end);
-        if (end <= start) continue;
-        auto len = end - start;
-        auto *bk = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
-                        -1, 0);
-        if (bk == MAP_FAILED) continue;
-        auto old_prot = GetProt(i);
-        if (!i->is_r && mprotect(i->addr_start, len, old_prot | PROT_READ) != 0) {
-            PLOGE("Failed to hide %*s from maps", static_cast<int>(pathname.size()),
-                  pathname.data());
-            continue;
+    for (const auto& font : fonts) {
+        jstring path = env->NewStringUTF(font.c_str());
+        if (!path) {
+            if (env->ExceptionCheck()) env->ExceptionClear();
+            LOGW("Unable to allocate JNI string for font warmup");
+            break;
         }
-        memcpy(bk, i->addr_start, len);
-        mremap(bk, len, len, MREMAP_FIXED | MREMAP_MAYMOVE, i->addr_start);
-        mprotect(i->addr_start, len, old_prot);
-
-        LOGV("Hide %*s from maps", static_cast<int>(pathname.size()), pathname.data());
-    }
-}
-
-static void PreloadFonts(JNIEnv *env, const std::vector<std::string> &fonts) {
-    auto typefaceClass = env->FindClass("android/graphics/Typeface");
-    auto methodId = env->GetStaticMethodID(typefaceClass, "nativeWarmUpCache", "(Ljava/lang/String;)V");
-    if (!methodId) {
-        env->ExceptionClear();
-        return;
-    }
-
-    for (const std::string &font : fonts) {
-        env->CallStaticVoidMethod(typefaceClass, methodId, env->NewStringUTF(font.c_str()));
+        env->CallStaticVoidMethod(typeface, warm_up, path);
+        env->DeleteLocalRef(path);
         if (env->ExceptionCheck()) {
-            LOGW("Preload font %s failed", font.c_str());
-            env->ExceptionDescribe();
+            LOGW("Cannot preload %s", font.c_str());
             env->ExceptionClear();
-        } else {
-            LOGV("Preloaded font %s", font.c_str());
         }
     }
+    env->DeleteLocalRef(typeface);
 }
 
-class ZygiskModule : public zygisk::ModuleBase {
+class ZygiskModule final : public zygisk::ModuleBase {
 public:
-    void onLoad(Api *_api, JNIEnv *_env) override {
-        this->api = _api;
-        this->env = _env;
+    void onLoad(Api* loaded_api, JNIEnv* loaded_env) override {
+        api_ = loaded_api;
+        env_ = loaded_env;
     }
 
-    void preAppSpecialize(AppSpecializeArgs *args) override {
-        InitCompanion();
-        PreloadFonts(env, fonts);
-
-        api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
+    void preAppSpecialize(AppSpecializeArgs* /*args*/) override {
+        LoadFontPaths();
+        PreloadFonts(env_, fonts_);
+        api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
     }
 
-    void preServerSpecialize(ServerSpecializeArgs *args) override {
-        api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
+    void preServerSpecialize(ServerSpecializeArgs* /*args*/) override {
+        api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
     }
 
 private:
-    Api *api{};
-    JNIEnv *env{};
-    std::vector<std::string> fonts;
+    Api* api_ = nullptr;
+    JNIEnv* env_ = nullptr;
+    std::vector<std::string> fonts_;
 
-    void InitCompanion() {
-        auto companion = api->connectCompanion();
-        if (companion == -1) {
-            LOGE("Failed to connect to companion");
+    void LoadFontPaths() {
+        const int companion = api_->connectCompanion();
+        if (companion < 0) {
+            LOGW("FontLoader companion is unavailable");
             return;
         }
 
-        char path[PATH_MAX]{};
-        auto size = read_int(companion);
-        for (int i = 0; i < size; ++i) {
-            auto string_size = read_int(companion);
-            read_full(companion, path, string_size);
-            path[string_size] = '\0';
-            fonts.emplace_back(path);
+        const int count = read_int(companion);
+        if (count < 0 || count > kMaxFonts) {
+            LOGW("Invalid font count from companion: %d", count);
+            close(companion);
+            return;
         }
 
+        char path[PATH_MAX];
+        for (int i = 0; i < count; ++i) {
+            const int length = read_int(companion);
+            if (length <= 0 || length >= static_cast<int>(sizeof(path)) ||
+                read_full(companion, path, static_cast<size_t>(length)) != 0) {
+                LOGW("Truncated or invalid font path from companion");
+                fonts_.clear();
+                break;
+            }
+            path[length] = '\0';
+            if (path[0] != '/' ||
+                std::string(path, static_cast<size_t>(length)).find('\0') != std::string::npos) {
+                LOGW("Invalid font path from companion");
+                fonts_.clear();
+                break;
+            }
+            fonts_.emplace_back(path, static_cast<size_t>(length));
+        }
         close(companion);
     }
 };
 
-static bool PrepareCompanion(std::vector<std::string> &fonts) {
-    bool result = false;
-    char path[PATH_MAX]{};
-    struct dirent *entry;
+void CompanionEntry(int socket) {
+    // Zygisk launches a new companion after a reboot; caching within that
+    // process avoids scanning every systemless font module for each app fork.
+    static const std::vector<std::string> fonts =
+            fontloader::CollectMountedFonts(fontloader::ScanOptions{});
 
-    ScopedReaddir modules("/data/adb/modules/");
-    if (modules.IsBad()) goto clean;
-
-    while ((entry = modules.ReadEntry())) {
-        if (entry->d_type != DT_DIR) continue;
-        if (entry->d_name[0] == '.') continue;
-
-        snprintf(path, PATH_MAX, "/data/adb/modules/%s/disable", entry->d_name);
-        if (access(path, F_OK) == 0) {
-            LOGV("Module %s is disabled", entry->d_name);
-            continue;
-        }
-
-        snprintf(path, PATH_MAX, "/data/adb/modules/%s/system/fonts", entry->d_name);
-        if (access(path, F_OK) != 0) {
-            LOGV("Module %s does not contain font", entry->d_name);
-            continue;
-        }
-
-        ScopedReaddir dir(path);
-        if (dir.IsBad()) {
-            LOGW("Cannot open %s", path);
-            continue;
-        }
-
-        while ((entry = dir.ReadEntry())) {
-            if (entry->d_type != DT_REG) continue;
-            if (entry->d_name[0] == '.') continue;
-
-            snprintf(path, PATH_MAX, "/system/fonts/%s", entry->d_name);
-            if (access(path, F_OK) == 0) {
-                fonts.emplace_back(path);
-                LOGI("Collected font %s", path);
-            } else {
-                LOGW("Font %s does not exist", path);
-            }
-        }
+    write_int(socket, static_cast<int>(fonts.size()));
+    for (const auto& font : fonts) {
+        write_int(socket, static_cast<int>(font.size()));
+        if (write_full(socket, font.data(), font.size()) != 0) break;
     }
-
-    result = true;
-
-    clean:
-    return result;
-}
-
-static void CompanionEntry(int socket) {
-    static std::vector<std::string> fonts;
-    static auto prepare = PrepareCompanion(fonts);
-
-    write_int(socket, fonts.size());
-
-    for (const std::string &font: fonts) {
-        auto size = font.size();
-        auto array = font.c_str();
-        write_int(socket, size);
-        write_full(socket, array, size);
-    }
-
     close(socket);
 }
 
-REGISTER_ZYGISK_MODULE(ZygiskModule)
+}  // namespace
 
+REGISTER_ZYGISK_MODULE(ZygiskModule)
 REGISTER_ZYGISK_COMPANION(CompanionEntry)

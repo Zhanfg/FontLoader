@@ -1,4 +1,4 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// Top-level configuration.
 apply plugin: 'idea'
 
 idea.module {
@@ -13,9 +13,6 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.7.3'
-
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
     }
 }
 
@@ -26,8 +23,8 @@ task clean(type: Delete) {
 ext {
     moduleId = 'font-loader'
     moduleName = 'Font Loader'
-    moduleDescription = 'Preload font modules for Android 12. Do not enable useless DenyList and use hide module for hiding ROOT instead!'
-    moduleAuthor = 'JingMatrix, Rikka'
-    moduleVersionName = '1.1.0'
-    moduleVersionCode = 3
+    moduleDescription = 'Preload systemless static and variable fonts on Android 12-17 (experimental on Android 17).'
+    moduleAuthor = 'JingMatrix, Rikka; modernized by Axymorrsen'
+    moduleVersionName = '1.2.0-beta1'
+    moduleVersionCode = 4
 }

@@ -1,22 +1,63 @@
-# FontLoader
+# FontLoader (Android 12–17 modernization)
 
-Modifying fonts is a common scenario using the Magisk module. For example, fonts for CJK languages in the Android system only have one font-weight, users can use the Magisk module to modify font files to add the remaining font weights.
+This fork preloads **systemless-mounted font files before app specialization**
+to preserve access when a Magisk denylist or other mount namespace boundary
+removes the original module's files.
 
-However, starting from Android 12, fonts are loaded only when the app needs to render the font. Before, fonts are preloaded in the zygote process. When users revert the change of Magisk (with MagiskHide before or DenyList nowadays), apps will not be able to access font files from modules and finally result in a crash.
+## Compatibility
 
-This module is a Zygisk module that is designed to solve the problem. The principle is simple, preload the font when the app has not yet lost access to the font.
+- Android 12–17 (API 31–37 **runtime** support target; device validation required).
+- Scans systemless fonts in `/system/fonts`, `/product/fonts`,
+  `/system_ext/fonts`, `/vendor/fonts`, and `/odm/fonts`.
+- Supports `.ttf`, `.otf`, `.ttc`, and `.otc` (including variable fonts).
+- Skips disabled/removed font modules. Deduplicates paths and bounds the
+  Zygisk companion protocol.
+- No root hiding, vendor framework hooks or changes to font weights.
+- The build currently compiles with API 36; **this does not mean Android 17
+  is device-certified**. The native font warmup path is checked at runtime.
 
-## Usage
+## Variable fonts
 
-1. Install FontLoader module in Magisk app
-2. Remove target apps with font customizations out of DenyList
+FontLoader warms the *whole font file*, not a list of baked `wght` instances.
+The Android framework resolves OpenType axes (such as `wght`, `ital`,
+`wdth`, `slnt`, and `opsz`) using the font and its font configuration.
 
-To be clear, DenyList is NOT for hiding purposes. This is as topjohnwu, the author of Magisk, said. And using DenyList for hiding is not enough.
+**FontLoader does not create a variable family by itself.** The font module
+must supply compatible files and system font configuration. On Android 15+,
+vendor variable fallback families belong in `/system/etc/font_fallback.xml`
+(or the appropriate product/vendor customization); in supported fallback
+families, `supportedAxes="wght,ital"` enables the platform to resolve these
+axes dynamically. Do not claim support for a font axis not present in its
+OpenType `fvar` table. Avoid assuming `fonts.xml` is authoritative on
+Android 15–17.
 
-## Something else
+The AOSP runtime has documented `wght`/`ital` support for
+`supportedAxes`. Other axes are useful for app-level variation settings,
+but are **not** universally selectable by font fallback configuration.
+This module preserves file access; it cannot override ColorOS/HyperOS
+font managers or fix broken font tables.
 
-* Why not using the font upgrade feature from Android 12?
+## Testing and rollout
 
-  The font upgrade feature cannot set the default font-weight and language. Therefore it can only be used to upgrade/add a font with a single font-weight like emoji font. This is exactly how it is used in the documentation.
+CI compiles the Android module and executes host tests for scanner behavior.
+These tests **do not** prove boot safety or font rendering on physical
+Android 16/17 devices. Test a disposable device/profile before installing
+on your daily driver. Keep an uninstall/recovery route available.
 
-  Also, the font upgrade feature requires signing font files. It is impossible to add our key without modifying Magisk.
+Install through a Magisk/Zygisk-compatible module manager. This fork retains
+its predecessor's Magisk installer, so other root managers need separate
+validation. Android 12+ only.
+
+For repeatable visual validation, compare glyph/fallback, regular/bold/italic,
+variable `wght` values 100/400/700/900, CJK fallback, and apps inside and
+outside the denylist. Check `logcat -s FontLoader` for warmup failures.
+
+## Design
+
+1. Scan active systemless font overlays in the Zygisk companion.
+2. Return bounded, deduplicated font paths to each app before specialization.
+3. Call `Typeface.nativeWarmUpCache(String)` for each path; the framework
+   takes responsibility for TTC and variable-font axis resolution.
+4. Unload the module library from the child process.
+
+Upstream: JingMatrix/FontLoader (based on RikkaW/FontLoader).
