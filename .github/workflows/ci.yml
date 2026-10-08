@@ -38,7 +38,7 @@ jobs:
           test -f out/font-loader-1.2.0-beta1-release.zip
           unzip -t out/font-loader-1.2.0-beta1-release.zip
           unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'module.prop'
-          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'zygisk/arm64-v8a.so'
+          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'lib/arm64-v8a/libfontloader.so'
 
       - name: Upload release
         uses: actions/upload-artifact@v4
