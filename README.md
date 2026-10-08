@@ -63,3 +63,12 @@ outside the denylist. Check `logcat -s FontLoader` for warmup failures.
 4. Unload the module library from the child process.
 
 Upstream: JingMatrix/FontLoader (based on RikkaW/FontLoader).
+
+## Downloading from GitHub Actions
+
+The GitHub Actions **FontLoader-release** artifact is an **outer archive**:
+extract `font-loader-1.2.0-beta2-release.zip` from it before flashing.
+Do not flash the outer `FontLoader-release.zip` as a module: it does not
+contain a root-level `module.prop`. Install only the inner module ZIP.
+Our CI verifies that the actual installer extracts and validates the native
+libraries successfully on both Magisk and KernelSU-style environments.

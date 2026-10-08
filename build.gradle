@@ -25,6 +25,6 @@ ext {
     moduleName = 'Font Loader'
     moduleDescription = 'Preload systemless static and variable fonts on Android 12-17 (experimental on Android 17).'
     moduleAuthor = 'JingMatrix, Rikka; modernized by Axymorrsen'
-    moduleVersionName = '1.2.0-beta1'
-    moduleVersionCode = 4
+    moduleVersionName = '1.2.0-beta2'
+    moduleVersionCode = 5
 }

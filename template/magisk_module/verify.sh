@@ -34,6 +34,13 @@ extract() {
   unzip $opts "$zip" "$file.sha256sum" -d "$TMPDIR_FOR_VERIFY" >&2
   [ -f "$hash_path" ] || abort_verify "$file.sha256sum not exists"
 
-  (echo "$(cat "$hash_path")  $file_path" | sha256sum -c -s -) || abort_verify "Failed to verify $file"
+  # Compare SHA-256 digests directly: Android Toybox, BusyBox and GNU
+  # sha256sum differ in the support for '-s' / '--status'.
+  expected_hash="$(cat "$hash_path")"
+  actual_line="$(sha256sum "$file_path")" || abort_verify "Cannot hash $file"
+  actual_hash="${actual_line%% *}"
+  if [ -z "$expected_hash" ] || [ "$actual_hash" != "$expected_hash" ]; then
+    abort_verify "SHA-256 mismatch for $file"
+  fi
   ui_print "- Verified $file" >&1
 }
