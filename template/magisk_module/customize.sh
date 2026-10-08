@@ -39,4 +39,9 @@ if [ "$IS64BIT" = true ]; then
   mv "$MODPATH/zygisk/libfontloader.so" "$MODPATH/zygisk/$ARCH_NAME_SECONDARY.so"
 fi
 
+# This module is a Zygisk hook and mounts NO system paths.
+touch "$MODPATH/skip_mount"
+# Fail closed; never enable experimental font work on install.
+rm -f "$MODPATH/enable-preload"
+ui_print "- Boot Guard: font preloading disabled (safe by default)"
 set_perm_recursive "$MODPATH" 0 0 0755 0644
