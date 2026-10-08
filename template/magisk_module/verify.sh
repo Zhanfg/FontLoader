@@ -13,7 +13,7 @@ extract() {
   zip=$1
   file=$2
   dir=$3
-  junk_paths=$4
+  junk_paths=${4:-}
   [ -z "$junk_paths" ] && junk_paths=false
   opts="-o"
   [ $junk_paths = true ] && opts="-oj"
