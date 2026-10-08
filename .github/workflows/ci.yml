@@ -1,46 +1,35 @@
-name: CI
-
+name: Boot Guard CI
 on:
   push:
-    branches: [ master ]
-    tags: [ v* ]
+    branches: [ "fix/**" ]
   pull_request:
-  merge_group:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
-
-      - name: Setup Java
+      - name: Host guard regression tests
+        run: |
+          g++ -std=c++20 -Wall -Wextra -Werror -O2 tests/boot_policy_test.cpp -o /tmp/boot_policy_test
+          /tmp/boot_policy_test
+      - name: Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "21"
-
-      - name: Setup ninja                                                                             
-        uses: seanmiddleditch/gha-setup-ninja@master                                                  
-        with:                                                                                         
-          version: 1.12.0  
-
-      - name: Build with Gradle
+          distribution: temurin
+          java-version: '21'
+      - name: Android native build
+        run: ./gradlew --no-daemon build
+      - name: Verify ZIP and simulate installers
         run: |
-          ./gradlew build
-
-      - name: Upload release
+          test -f out/font-loader-1.2.0-bootguard-preview1-release.zip
+          unzip -tq out/font-loader-1.2.0-bootguard-preview1-release.zip
+          unzip -Z1 out/font-loader-1.2.0-bootguard-preview1-release.zip | grep -Fx 'module.prop'
+          unzip -Z1 out/font-loader-1.2.0-bootguard-preview1-release.zip | grep -Fx 'lib/arm64-v8a/libfontloader.so'
+          sh tests/install_smoke.sh out/font-loader-1.2.0-bootguard-preview1-release.zip
+      - name: Upload diagnostic artifact only
         uses: actions/upload-artifact@v4
         with:
-          name: FontLoader-release
-          path: "out/release/*"
-
-      - name: Upload debug
-        uses: actions/upload-artifact@v4
-        with:
-          name: FontLoader-debug
-          path: "out/debug/*"
+          name: BOOTGUARD-DIAGNOSTIC-NOT-DEVICE-VERIFIED
+          path: out/*-release.zip
+          if-no-files-found: error
