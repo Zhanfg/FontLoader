@@ -1,13 +1,6 @@
 #!/system/bin/sh
+# Informational only; root provider does not need to expose the Magisk CLI.
 MODDIR=${0%/*}
-MODULE_ID=$(basename "$MODDIR")
-
-MAGISK_VER_CODE=$(magisk -V)
-if [ "$MAGISK_VER_CODE" -ge 21000 ]; then
-  MAGISK_PATH="$(magisk --path)/.magisk/modules/$MODULE_ID"
-else
-  MAGISK_PATH=/sbin/.magisk/modules/$MODULE_ID
+if command -v log >/dev/null 2>&1; then
+  log -p i -t FontLoader "Module active: $MODDIR"
 fi
-
-log -p i -t "FontLoader" "Magisk version $MAGISK_VER_CODE"
-log -p i -t "FontLoader" "Magisk module path $MAGISK_PATH"

@@ -45,10 +45,18 @@ check_android_version() {
 }
 
 check_magisk_version() {
+  if [ "$KSU" = true ]; then
+    ui_print "- KernelSU detected; install a compatible Zygisk provider (such as ZygiskNext)"
+    return
+  fi
+  if [ "$APATCH" = true ]; then
+    ui_print "- APatch detected; install a compatible Zygisk provider"
+    return
+  fi
   ui_print "- Magisk version: $MAGISK_VER ($MAGISK_VER_CODE)"
   ui_print "- Installing Font Loader"
 
-  if [ "$MAGISK_VER_CODE" -lt 23014 ]; then
+  if [ "${MAGISK_VER_CODE:-0}" -lt 23014 ]; then
     ui_print "*********************************************************"
     ui_print "! Zygisk requires Magisk 23014+"
     abort "*********************************************************"

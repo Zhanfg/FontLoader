@@ -21,6 +21,8 @@ struct ScanOptions {
         {"system_ext/fonts", "/system_ext/fonts"},
         {"vendor/fonts", "/vendor/fonts"},
         {"odm/fonts", "/odm/fonts"},
+        {"my_product/fonts", "/my_product/fonts"},
+        {"my_stock/fonts", "/my_stock/fonts"},
     };
 };
 

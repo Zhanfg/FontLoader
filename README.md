@@ -8,7 +8,8 @@ removes the original module's files.
 
 - Android 12–17 (API 31–37 **runtime** support target; device validation required).
 - Scans systemless fonts in `/system/fonts`, `/product/fonts`,
-  `/system_ext/fonts`, `/vendor/fonts`, and `/odm/fonts`.
+  `/system_ext/fonts`, `/vendor/fonts`, `/odm/fonts`, and optional OPlus
+  `/my_product/fonts` and `/my_stock/fonts`.
 - Supports `.ttf`, `.otf`, `.ttc`, and `.otc` (including variable fonts).
 - Skips disabled/removed font modules. Deduplicates paths and bounds the
   Zygisk companion protocol.
@@ -44,9 +45,10 @@ These tests **do not** prove boot safety or font rendering on physical
 Android 16/17 devices. Test a disposable device/profile before installing
 on your daily driver. Keep an uninstall/recovery route available.
 
-Install through a Magisk/Zygisk-compatible module manager. This fork retains
-its predecessor's Magisk installer, so other root managers need separate
-validation. Android 12+ only.
+Install with Magisk, KernelSU, or APatch. Magisk requires Zygisk enabled;
+KernelSU/APatch need a separately installed Zygisk provider such as
+ZygiskNext. Installer compatibility does not prove ROM-level compatibility.
+Android 12+ only.
 
 For repeatable visual validation, compare glyph/fallback, regular/bold/italic,
 variable `wght` values 100/400/700/900, CJK fallback, and apps inside and
