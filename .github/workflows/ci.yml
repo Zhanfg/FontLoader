@@ -33,16 +33,23 @@ jobs:
       - name: Build Android module
         run: ./gradlew --no-daemon build
 
+      - name: Verify installable ZIP
+        run: |
+          test -f out/font-loader-1.2.0-beta1-release.zip
+          unzip -t out/font-loader-1.2.0-beta1-release.zip
+          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'module.prop'
+          unzip -l out/font-loader-1.2.0-beta1-release.zip | grep -F 'zygisk/arm64-v8a.so'
+
       - name: Upload release
         uses: actions/upload-artifact@v4
         with:
           name: FontLoader-release
-          path: out/release/*.zip
+          path: out/*-release.zip
           if-no-files-found: error
 
       - name: Upload debug
         uses: actions/upload-artifact@v4
         with:
           name: FontLoader-debug
-          path: out/debug/*.zip
+          path: out/*-debug.zip
           if-no-files-found: error
