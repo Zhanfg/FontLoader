@@ -73,7 +73,8 @@ std::vector<std::string> CollectMountedFonts(const ScanOptions& options) {
         const std::string module_root = Join(options.modules_root, name);
         if (!IsDirectory(module_root) ||
             Exists(Join(module_root, "disable")) ||
-            Exists(Join(module_root, "remove"))) {
+            Exists(Join(module_root, "remove")) ||
+            Exists(Join(module_root, "skip_mount"))) {
             continue;
         }
 

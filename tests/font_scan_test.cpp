@@ -28,11 +28,14 @@ int main() {
     Touch(modules / "enabled/system/fonts/Variable.TTF");
     Touch(modules / "enabled/system/fonts/Collection.ttc");
     Touch(modules / "enabled/system/fonts/ignored.woff");
+    Touch(modules / "enabled/system/product/fonts/Serif.otc");
     Touch(modules / "enabled/product/fonts/Serif.otc");
     Touch(modules / "disabled/system/fonts/nope.ttf");
     Touch(modules / "disabled/disable");
     Touch(modules / "removed/system/fonts/nope2.ttf");
     Touch(modules / "removed/remove");
+    Touch(modules / "skipped/system/fonts/nope3.ttf");
+    Touch(modules / "skipped/skip_mount");
     Touch(modules / "enabled/vendor/fonts/not-mounted.otf");
     Touch(system / "Variable.TTF");
     Touch(system / "Collection.ttc");
@@ -44,6 +47,7 @@ int main() {
     options.mounts = {
         {"system/fonts", system.string()},
         {"product/fonts", product.string()},
+        {"system/product/fonts", product.string()},
         {"system/fonts", system.string()},  // no duplicates
         {"../invalid", system.string()},  // no path traversal
     };

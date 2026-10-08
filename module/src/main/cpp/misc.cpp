@@ -25,6 +25,7 @@ int read_full(int fd, void *out, size_t len) {
 int write_full(int fd, const void *buf, size_t count) {
     while (count > 0) {
         ssize_t size = write(fd, buf, count < SSIZE_MAX ? count : SSIZE_MAX);
+        if (size == 0) return -1;
         if (size == -1) {
             if (errno == EINTR)
                 continue;

@@ -18,11 +18,17 @@ struct ScanOptions {
     std::vector<FontMount> mounts = {
         {"system/fonts", "/system/fonts"},
         {"product/fonts", "/product/fonts"},
+        {"system/product/fonts", "/product/fonts"},
         {"system_ext/fonts", "/system_ext/fonts"},
+        {"system/system_ext/fonts", "/system_ext/fonts"},
         {"vendor/fonts", "/vendor/fonts"},
+        {"system/vendor/fonts", "/vendor/fonts"},
         {"odm/fonts", "/odm/fonts"},
+        {"system/odm/fonts", "/odm/fonts"},
         {"my_product/fonts", "/my_product/fonts"},
+        {"system/my_product/fonts", "/my_product/fonts"},
         {"my_stock/fonts", "/my_stock/fonts"},
+        {"system/my_stock/fonts", "/my_stock/fonts"},
     };
 };
 
