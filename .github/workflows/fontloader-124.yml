@@ -1,0 +1,43 @@
+name: FontLoader 1.2.4
+
+on:
+  push:
+    branches: [ "release/1.2.4" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static validation
+        run: |
+          sh -n packaging/customize.sh
+          sh -n packaging/verify.sh
+          python3 -m py_compile tools/repack.py
+          python3 tests/validate.py
+      - name: Check pinned v1.2.3 ZIP
+        id: source
+        run: |
+          if test -f baseline/Font-Loader-v1.2.3-33-b558385-release.zip; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Original v1.2.3 ZIP not yet committed; no binary release created."
+          fi
+      - name: Repackage verified v1.2.3 into 1.2.4 RC
+        if: steps.source.outputs.ready == 'true'
+        run: |
+          python3 tools/repack.py baseline/Font-Loader-v1.2.3-33-b558385-release.zip out/Font-Loader-v1.2.4-34-rc2.zip
+          unzip -tq out/Font-Loader-v1.2.4-34-rc2.zip
+          sh tests/install_smoke.sh out/Font-Loader-v1.2.4-34-rc2.zip
+      - name: Upload candidate ZIP
+        if: steps.source.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: FontLoader-1.2.4-rc2-NOT-DEVICE-VERIFIED
+          path: out/Font-Loader-v1.2.4-34-rc2.zip
+          if-no-files-found: error
