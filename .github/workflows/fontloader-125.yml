@@ -1,0 +1,33 @@
+name: FontLoader 1.2.5 variable font preflight
+
+on:
+  push:
+    branches: [ "feature/1.2.5-variable-fonts" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  variable-font-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install font parsing dependency
+        run: python -m pip install "fonttools>=4.50,<5"
+      - name: Run font axis and XML compatibility tests
+        run: python -m unittest discover -s tests -p "test_vf_audit.py" -v
+      - name: Audit font fixtures when present
+        run: |
+          mkdir -p out
+          python tools/vf_audit.py --output out/variable-font-preflight.json
+          python -m json.tool out/variable-font-preflight.json > /dev/null
+      - name: Upload analysis (NO Android ZIP)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FontLoader-1.2.5-variable-font-preflight
+          path: out/variable-font-preflight.json
+          if-no-files-found: error
