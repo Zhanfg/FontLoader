@@ -31,12 +31,13 @@ jobs:
       - name: Repackage verified v1.2.3 into 1.2.4 RC
         if: steps.source.outputs.ready == 'true'
         run: |
-          python3 tools/repack.py baseline/Font-Loader-v1.2.3-33-b558385-release.zip out/Font-Loader-v1.2.4-34-rc1.zip
-          unzip -tq out/Font-Loader-v1.2.4-34-rc1.zip
+          python3 tools/repack.py baseline/Font-Loader-v1.2.3-33-b558385-release.zip out/Font-Loader-v1.2.4-34-rc2.zip
+          unzip -tq out/Font-Loader-v1.2.4-34-rc2.zip
+          sh tests/install_smoke.sh out/Font-Loader-v1.2.4-34-rc2.zip
       - name: Upload candidate ZIP
         if: steps.source.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: FontLoader-1.2.4-rc1-NOT-DEVICE-VERIFIED
-          path: out/Font-Loader-v1.2.4-34-rc1.zip
+          name: FontLoader-1.2.4-rc2-NOT-DEVICE-VERIFIED
+          path: out/Font-Loader-v1.2.4-34-rc2.zip
           if-no-files-found: error

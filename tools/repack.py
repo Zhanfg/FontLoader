@@ -24,13 +24,13 @@ def build(input_path, output_path):
     for name,digest in LIB_HASHES.items():
         if sha(files[name]) != digest: raise ValueError("ELF mismatch: " + name)
     files["module.prop"] = (
-        "id=fontloader\nname=Font Loader\nversion=v1.2.4-rc1\nversionCode=34\n"
+        "id=fontloader\nname=Font Loader\nversion=v1.2.4-rc2\nversionCode=34\n"
         "author=aviraxp, RikkaW; guarded packaging by Axymorrsen\n"
-        "description=Original v1.2.3 native loader. Disabled by default for safety.\n").encode()
+        "description=Original v1.2.3 native loader. Enabled by default; guarded installer.\n").encode()
     folder=Path(__file__).resolve().parents[1]
     files["customize.sh"]=(folder/"packaging/customize.sh").read_bytes()
     files["verify.sh"]=(folder/"packaging/verify.sh").read_bytes()
-    files["GUARD-NOTICE.txt"]=b"v1.2.4-rc1 preserves all native v1.2.3 ELF bytes. Inert after installation; manual enable required. Android 16/17 runtime not certified.\n"
+    files["GUARD-NOTICE.txt"]=b"v1.2.4-rc2 preserves all native v1.2.3 ELF bytes. Enabled by default as requested. Android 16/17 runtime not certified.\n"
     Path(output_path).parent.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(output_path,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
         for name,data in sorted(files.items()):

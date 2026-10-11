@@ -1,17 +1,20 @@
-# FontLoader 1.2.4 — staged, not released
+# FontLoader v1.2.4-rc2 — enabled by default
 
-This branch plans an installer-only 1.2.4 release candidate based on the **exact
-uploaded v1.2.3** binary module (not the unrelated v1.1.0 fork master sources).
+This RC repackages the exact user-supplied v1.2.3 ZIP (SHA-256 pinned in tools/repack.py).
+All four native Zygisk shared libraries retain exactly the same bytes as v1.2.3.
 
-The original v1.2.3 ZIP has pinned SHA-256:
-`d4d52e60e6a06d3027010e8d3c993ed06198b7a9b90898d3ae32d48ace761182`.
+- Module ID: `fontloader`; versionCode: 34.
+- Installation is enabled by default: no `disable` marker is created.
+- The installer removes any stale disable marker in its staging MODPATH.
+- `skip_mount` remains: FontLoader should not mount system fonts itself.
+- Detects a conflicting active old `font-loader` test module.
+- Checks extracted native library SHA-256 and handles device ABI.
+- CI runs packaging, archive integrity and real installer smoke tests.
 
-After the original file is committed to
-`baseline/Font-Loader-v1.2.3-33-b558385-release.zip`, the Action will
-preserve its four ELF binaries and generate v1.2.4-rc1, versionCode 34.
-Until then CI checks the scripts but does **not** create an installable ZIP.
+Native code is **not recompiled**: matching v1.2.3 source code is not in the current
+fork, whose master sources correspond to v1.1.0. Thus there is no basis to assert
+Android 17 boot stability from CI alone. The owner reports the previous ROM boot
+issue has been resolved and explicitly requested default-on behavior.
 
-Changes: architecture detection, installation checksums, legacy-module conflict
-guard, `skip_mount`, default `disable`, removal of the dead updateJson URL.
-The compiled hooks are unchanged; Android 16/17 boot stability is unverified.
-Do not flash this candidate on the device that previously boot-hung.
+To disable after installation: use the root manager module toggle or create
+`/data/adb/modules/fontloader/disable` using an accessible root shell.

@@ -21,7 +21,9 @@ if [ -n "$ABI32" ]; then
   [ -z "$AVAILABLE32" ] || verify_extract "lib/$ABI32/libfontloader.so" "$MODPATH/zygisk/$ABI32.so"
 fi
 touch "$MODPATH/skip_mount" || abort "! Cannot set skip_mount"
-touch "$MODPATH/disable" || abort "! Cannot set disable safeguard"
+if [ -e "$MODPATH/disable" ]; then
+  rm -f "$MODPATH/disable" || abort "! Cannot clear previous disabled marker"
+fi
 set_perm_recursive "$MODPATH" 0 0 0755 0644
-ui_print "- v1.2.4-rc1 installed with ORIGINAL v1.2.3 native code"
-ui_print "- SAFE: module disabled by default until reviewed"
+ui_print "- v1.2.4-rc2 installed with ORIGINAL v1.2.3 native code"
+ui_print "- Zygisk module ENABLED by default (no disable marker)"
